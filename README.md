@@ -1,6 +1,6 @@
 # RAG-based Chatbot with LangChain and FastAPI
 
-A Retrieval-Augmented Generation (RAG) chatbot that combines document search capabilities with language model responses. The system uses LangChain's graph architecture for conversation flow, Chroma for vector storage, and FastAPI for the web interface.
+A Retrieval-Augmented Generation (RAG) chatbot that combines document search capabilities with language model responses. The system uses LangChain's graph architecture for conversation flow, Chroma for vector storage, ollama for document embedding and FastAPI for the web interface.
 
 ## Features
 
@@ -8,7 +8,7 @@ A Retrieval-Augmented Generation (RAG) chatbot that combines document search cap
 - 💾 **Vector Storage**: Uses Chroma for efficient document embedding and retrieval
 - 🌐 **Web Interface**: Clean chat UI served via FastAPI
 - 🔄 **Flexible LLM Support**: Works with multiple providers (Google Gemini, OpenAI, Ollama)
-- 📚 **Document Processing**: Handles PDF documents with automatic chunking and embedding
+- 📚 **Document Processing**: Handles PDF documents with automatic chunking and embedding using ollama local model
 - 🧵 **Conversation Threading**: Supports multiple conversation threads
 
 ---
@@ -43,7 +43,7 @@ chatbot-rag/
     ```config.py
      GOOGLE_API_KEY=your_key_here
     ```
-    In Production, keep these keys in .env ot environment manager and then use
+    In Production, keep these keys in .env or environment manager and then use.
 3. Prepare your documents:
    - Place PDF files in the `data/` directory
    - Run the data population script:
@@ -104,10 +104,25 @@ flowchart TB
 
 **Notes**
 - **Routing**: The LangChain graph decides whether to call the retriever or go straight to the chat LLM.
-- **Ingestion**: `populate_data.py` performs PDF parsing, chunking, and embeddings (Ollama) and writes to **Chroma**.
 - **Runtime**: For document questions, the server embeds the query, searches **Chroma**, and sends retrieved context to the chat LLM. For greetings/small talk, it can skip retrieval.
-- **Boundary**: The **Chat UI has no direct access** to PDFs, embeddings, or Chroma; **only the FastAPI server** touches those resources.
-```
+- **Ingestion**: `populate_data.py` performs PDF parsing, chunking, and embeddings (Ollama) and writes to **Chroma**.
+
+---
+
+## Observation
+When testing different chat LLMs, we noticed a difference in behavior:
+
+- **Google Gemini for chat** – Correctly identifies casual greetings and responds without unnecessary retrieval.
+- **Ollama for chat** – Sometimes struggles to distinguish between retrieval queries and casual conversation. For example, even a simple “Hello” triggers document retrieval.
+- **Follow-up document reference behavior** – After getting a result, if asked for the document referred, **Ollama** again triggered a vector search, while **Google Gemini** used the conversation context to respond.
+
+### Screenshots
+Gemini Sample:\
+![Gemini Greeting Behavior](assets/google_llm_sample.png)
+
+Ollama Sample:\
+![Ollama Greeting Behavior](assets/ollama_llm_sample.png)
+
 ---
 
 ## Customization
@@ -146,6 +161,8 @@ from langchain_openai import OpenAIEmbeddings
 embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 ```
 
+---
+
 ## API Usage
 
 The chatbot exposes a simple REST API:
@@ -166,6 +183,8 @@ Content-Type: application/json
 }
 ```
 
+---
+
 ## Contributing
 
 1. Fork the repository
@@ -177,3 +196,4 @@ Content-Type: application/json
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
